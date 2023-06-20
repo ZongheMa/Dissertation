@@ -41,7 +41,7 @@ traffic_flows = merge_csv_files(
 lsoa = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/London administrative boundaries/london_LSOA/london_LSOA.shp'
 road_network = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/[XH]road_network/road_network.shp'
 
-# lsoa = gpd.read_file(lsoa, crs={'init': 'epsg:27700'})
+lsoa = gpd.read_file(lsoa, crs={'init': 'epsg:27700'})
 road_network = gpd.read_file(road_network, crs={'init': 'epsg:27700'})
 
 flows = pd.merge(
@@ -50,4 +50,14 @@ flows = pd.merge(
                   ]],
     traffic_flows, left_on='toid', right_on='toid', how='right')
 
-flows.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows.shp')
+# Perform a spatial join
+joined_gdf = gpd.sjoin(lsoa, flows, how='inner', op='contains')
+result = joined_gdf.groupby(['LSOA21CD', 'date'])['bus','car','cycle','walks','stationary'].sum().reset_index()
+flows_lsoa = lsoa.merge(result, left_on='LSOA21CD', right_on='LSOA21CD', how='left')
+
+flows_lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows_lsoa.shp')
+
+
+
+
+# flows.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows.shp')
