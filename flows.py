@@ -56,8 +56,3 @@ result = joined_gdf.groupby(['LSOA21CD', 'date'])['bus','car','cycle','walks','s
 flows_lsoa = lsoa.merge(result, left_on='LSOA21CD', right_on='LSOA21CD', how='left')
 
 flows_lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows_lsoa.shp')
-
-
-
-
-# flows.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows.shp')
