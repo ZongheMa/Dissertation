@@ -204,5 +204,6 @@ lsoa = pd.merge(lsoa, sum_length[['LSOA21CD', 'Street density (m/ha)']], left_on
 
 lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/Mosaic_LSOA.shp')
 
-# lsoa.plot(column='Pct of Retail POIs (%)', legend=True)
-# plt.show()
+lsoa.plot(column='Pct of Retail POIs (%)', legend=True)
+plt.axis('off')
+plt.show()
