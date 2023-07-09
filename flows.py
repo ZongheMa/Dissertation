@@ -6,6 +6,7 @@ import os
 import gzip
 import shutil
 from datetime import datetime
+import matplotlib.colors as mcolors
 
 
 def merge_csv_files(directory):
@@ -35,11 +36,21 @@ def merge_csv_files(directory):
     return merged_df
 
 
+# return the top 25% of absolute values
+def top_10_abs(group, col):
+    # sort the group by the absolute value of the column
+    sorted_group = group.sort_values(by=col, key=abs, ascending=False)
+    # get the top 25% of the group
+    n = max(1, int(len(sorted_group) * 0.1))
+    return sorted_group.iloc[:n]
+
+
 # load the datasets
 traffic_flows = merge_csv_files(
     '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/[XH]Traffic flow')
 lsoa = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/London administrative boundaries/london_LSOA/london_LSOA.shp'
 road_network = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/[XH]road_network/road_network.shp'
+inoutter = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/London administrative boundaries/lp-consultation-oct-2009-inner-outer-london-shp/lp-consultation-oct-2009-inner-outer-london.shp'
 
 # clean the traffic flow data
 traffic_flows = traffic_flows.drop_duplicates(['toid', 'date'])
@@ -48,31 +59,16 @@ traffic_flows = traffic_flows.groupby(['toid', 'date']).agg(
 
 # lsoa = gpd.read_file(lsoa, crs={'init': 'epsg:27700'})
 road_network = gpd.read_file(road_network, crs={'init': 'epsg:27700'})
+inoutter = gpd.read_file(inoutter)
+inoutter.to_crs(epsg=27700, inplace=True)
 
 flows = pd.merge(
     road_network[['toid', 'roadclassi', 'routehiera', 'geometry',
                   'directiona', 'length', 'roadwidthm', 'elevationg'
                   ]],
     traffic_flows, left_on='toid', right_on='toid', how='right')
-# flows = gpd.GeoDataFrame(flows, crs={'init': 'epsg:27700'}, geometry='geometry')
-'''
-# Perform a spatial join to LSOA level
-joined_gdf = gpd.sjoin(lsoa, flows, how='inner', op='contains')
-result = joined_gdf.groupby(['LSOA21CD', 'date'])['bus','car','cycle','walks','stationary'].sum().reset_index()
-flows_lsoa = lsoa.merge(result, left_on='LSOA21CD', right_on='LSOA21CD', how='left')
 
-flows_lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/flows_lsoa.shp')
-'''
 # Perform the aggregation to road network level
-
-# cycle = flows.pivot(index='toid', columns='date', values='cycle')
-# road_geometry = flows[['toid', 'geometry']].drop_duplicates('toid')
-# cycle = cycle.merge(road_geometry, on='toid', how='left')
-# gpd.GeoDataFrame(cycle, geometry='geometry')
-#
-# cycle.plot(column='2020-03-01', legend=True)
-# plt.show()
-
 
 cycle = traffic_flows.pivot(index='toid', columns='date', values='cycle')
 cycle = pd.merge(road_network[['toid', 'roadclassi', 'routehiera', 'geometry',
@@ -95,9 +91,30 @@ cycle = pd.concat([cycle, week_sums], axis=1)
 cycle['diff_week_1&2'] = cycle['sum_week_2'] - cycle['sum_week_1']
 cycle['diff_week_2&3'] = cycle['sum_week_3'] - cycle['sum_week_2']
 
-# allocate the inner and outer London
+# re classify the road class
+print(cycle['roadclassi'].unique())
+# ['Unknown' 'Not Classified' 'Unclassified' 'B Road' 'A Road' 'Classified Unnumbered' 'Motorway']
+print(cycle['directiona'].unique())
+# ['bothDirections' 'inOppositeDirection' 'inDirection']
 
+cycle['classification'] = cycle['roadclassi'].replace(
+    {'Unknown': 'Other', 'Not Classified': 'Other', 'Unclassified': 'Other', 'Classified Unnumbered': 'Other'})
+cycle.drop(columns=['roadclassi', 'index', 'routehiera'], inplace=True)
 
-# cycle = gpd.GeoDataFrame(cycle, crs={'init': 'epsg:27700'}, geometry='geometry')
-# cycle.plot(column='diff_03/01/22', legend=True, cmap='OrRd').set_axis_off()
-# plt.show()
+diff = 'diff_03/01/22'
+cycle10 = cycle[
+    ['toid', 'geometry', 'directiona', 'length', 'roadwidthm', 'elevationg', 'classification', diff]].groupby(
+    'classification').apply(lambda x: top_10_abs(x, diff)).reset_index(drop=True)
+
+# plot the top 25% of the absolute values (flow changes) for each road class
+cycle10 = gpd.GeoDataFrame(cycle10, crs={'init': 'epsg:27700'}, geometry='geometry')
+
+# label the inner and outer london to the cycle10
+cycle10 = gpd.sjoin(cycle10, inoutter, how='inner', op='within')
+cycle10 = cycle10.drop(columns=['index_right', 'Source', 'Area_Ha', 'Shape_Leng', 'Shape_Area'])
+
+# visualize the top 10%
+fig, ax = plt.subplots(figsize=(20, 20), dpi=500)
+cycle10.plot(column='diff_03/01/22', legend=True, cmap='RdBu_r', ax=ax, linewidth=0.1)
+ax.set_axis_off()
+plt.show()
