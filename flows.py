@@ -7,6 +7,7 @@ import gzip
 import shutil
 from datetime import datetime
 import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
 
 
 def merge_csv_files(directory):
@@ -35,8 +36,7 @@ def merge_csv_files(directory):
     # Return the merged dataframe
     return merged_df
 
-
-# return the top 25% of absolute values
+# return the top 10% of absolute values
 def top_10_abs(group, col):
     # sort the group by the absolute value of the column
     sorted_group = group.sort_values(by=col, key=abs, ascending=False)
@@ -51,6 +51,19 @@ traffic_flows = merge_csv_files(
 lsoa = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/London administrative boundaries/london_LSOA/london_LSOA.shp'
 road_network = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/[XH]road_network/road_network.shp'
 inoutter = '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/London administrative boundaries/lp-consultation-oct-2009-inner-outer-london-shp/lp-consultation-oct-2009-inner-outer-london.shp'
+tube_line = 'https://raw.githubusercontent.com/oobrien/vis/master/tubecreature/data/tfl_lines.json'
+tube_station = 'https://raw.githubusercontent.com/oobrien/vis/master/tubecreature/data/tfl_stations.json'
+
+inoutter = gpd.read_file(inoutter)
+inoutter.to_crs(epsg=27700, inplace=True)
+
+tube_station = gpd.read_file(tube_station)
+tube_station.to_crs(epsg=27700, inplace=True)
+tube_station = gpd.sjoin(tube_station, inoutter, op='within')
+
+tube_line = gpd.read_file(tube_line)
+tube_line.to_crs(epsg=27700, inplace=True)
+tube_line = gpd.sjoin(tube_line, inoutter, op='within')
 
 # clean the traffic flow data
 traffic_flows = traffic_flows.drop_duplicates(['toid', 'date'])
@@ -59,8 +72,7 @@ traffic_flows = traffic_flows.groupby(['toid', 'date']).agg(
 
 # lsoa = gpd.read_file(lsoa, crs={'init': 'epsg:27700'})
 road_network = gpd.read_file(road_network, crs={'init': 'epsg:27700'})
-inoutter = gpd.read_file(inoutter)
-inoutter.to_crs(epsg=27700, inplace=True)
+
 
 flows = pd.merge(
     road_network[['toid', 'roadclassi', 'routehiera', 'geometry',
@@ -69,7 +81,6 @@ flows = pd.merge(
     traffic_flows, left_on='toid', right_on='toid', how='right')
 
 # Perform the aggregation to road network level
-
 cycle = traffic_flows.pivot(index='toid', columns='date', values='cycle')
 cycle = pd.merge(road_network[['toid', 'roadclassi', 'routehiera', 'geometry',
                                'directiona', 'length', 'roadwidthm', 'elevationg']],
@@ -102,11 +113,13 @@ cycle['classification'] = cycle['roadclassi'].replace(
 cycle.drop(columns=['roadclassi', 'index', 'routehiera'], inplace=True)
 
 diff = 'diff_03/01/22'
-cycle10 = cycle[
-    ['toid', 'geometry', 'directiona', 'length', 'roadwidthm', 'elevationg', 'classification', diff]].groupby(
-    'classification').apply(lambda x: top_10_abs(x, diff)).reset_index(drop=True)
+# cycle10 = cycle[
+#     ['toid', 'geometry', 'directiona', 'length', 'roadwidthm', 'elevationg', 'classification', diff]].groupby(
+#     'classification').apply(lambda x: top_10_abs(x, diff)).reset_index(drop=True)
 
-# plot the top 25% of the absolute values (flow changes) for each road class
+cycle10 = cycle[cycle[diff] >= cycle[diff].quantile(0.9)].reset_index(drop=True)
+
+# plot the top 10% of the absolute values (flow changes) for each road class
 cycle10 = gpd.GeoDataFrame(cycle10, crs={'init': 'epsg:27700'}, geometry='geometry')
 
 # label the inner and outer london to the cycle10
@@ -114,7 +127,57 @@ cycle10 = gpd.sjoin(cycle10, inoutter, how='inner', op='within')
 cycle10 = cycle10.drop(columns=['index_right', 'Source', 'Area_Ha', 'Shape_Leng', 'Shape_Area'])
 
 # visualize the top 10%
-fig, ax = plt.subplots(figsize=(20, 20), dpi=500)
-cycle10.plot(column='diff_03/01/22', legend=True, cmap='RdBu_r', ax=ax, linewidth=0.1)
+# fig, ax = plt.subplots()
+# cycle10.plot(column='diff_03/01/22', legend=True, cmap='viridis', ax=ax)
+# ax.set_axis_off()
+# plt.show()
+# plt.savefig('cycle_top10.png', dpi=600)
+
+
+fig, ax = plt.subplots(dpi=600)
+# Get unique types
+# road_class = cycle10['classification'].unique()
+# road_class = ['Motorway', 'A Road', 'B Road', 'Other']
+road_class = ['Other', 'B Road', 'A Road', 'Motorway']
+widths = {
+    'Other': 0.5,
+    'B Road': 1,
+    'A Road': 1.5,
+    'Motorway': 2
+}
+
+# Generate a colormap with the number of colors equal to the number of types
+cmap = plt.cm.get_cmap('tab10_r', len(road_class))
+
+inoutter.boundary.plot(color='black', ax=ax, linewidth=1)
+tube_line['geometry'] = tube_line.geometry.buffer(500)
+
+tube_line.plot(color='gainsboro', ax=ax, legend=True)
+
+for i, class_ in enumerate(road_class):
+    # Subset data by type
+    data = cycle10[cycle10['classification'] == class_]
+    # Plot subset with a unique color
+    data.plot(column='date', color=cmap(i), ax=ax, label=class_, linewidth=widths[class_])
+
+ax.set_axis_off()
+plt.legend(loc='lower right')
+plt.show()
+
+
+fig, ax = plt.subplots(dpi=600)
+# 创建一个新的列用于存储线宽
+linewidth_map = {'Motorway': 2, 'A Road': 1.5, 'B Road': 1, 'Other': 0.5}
+cycle10['linewidth'] = cycle10['classification'].map(linewidth_map)
+
+# 根据'linewidth'列进行排序
+cycle10 = cycle10.sort_values('linewidth')
+
+# 绘制图形
+cycle10.plot(column=diff, ax=ax, cmap='Wistia', linewidth=cycle10['linewidth'], legend=True)
+
+custom_lines = [Line2D([0], [0], color='b', lw=width) for width in linewidth_map.values()]
+ax.legend(custom_lines, linewidth_map.keys())
 ax.set_axis_off()
 plt.show()
+
