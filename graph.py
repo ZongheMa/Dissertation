@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
+
 def merge_csv_files(directory):
     # Get a list of all the csv files
     csv_files = [f for f in os.listdir(directory) if f.endswith('.csv')]
@@ -32,6 +33,7 @@ def merge_csv_files(directory):
 
     # Return the merged dataframe
     return merged_df
+
 
 traffic_flows = merge_csv_files(
     '/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/Raw data/[XH]Traffic flow')
@@ -139,7 +141,6 @@ for index, row in flows_gdf.iterrows():
         graph.add_edge(from_node, to_node, weight=flow,
                        toid=row['toid'], classification=row['classification'], geometry=row['geometry'])
 
-
 # Sort edges based on their weight (flow) in descending order
 sorted_edges = sorted(graph.edges(data=True), key=lambda x: x[2]['weight'], reverse=True)
 
@@ -151,7 +152,6 @@ top_10_edges_nodes = [(u, v) for u, v, _ in top_10_edges]
 
 # Specify the desired 'classification' attribute values to display
 desired_classifications = ['Motorway', 'A Road', 'B Road', 'Other']
-
 
 # Create a subgraph containing all edges
 subgraph_all = graph.edge_subgraph(top_10_edges_nodes)
@@ -215,3 +215,4 @@ plt.tight_layout()
 
 # Display the plots
 plt.show()
+# %%
