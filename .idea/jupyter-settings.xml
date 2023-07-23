@@ -15,7 +15,7 @@
           <value>
             <JupyterConnectionParameters>
               <option name="managed" value="true" />
-              <option name="sdkHomePath" value="$PROJECT_DIR$/../localgeo/bin/Python" />
+              <option name="sdkHomePath" value="/opt/anaconda3/envs/geospatial/bin/python" />
             </JupyterConnectionParameters>
           </value>
         </entry>
