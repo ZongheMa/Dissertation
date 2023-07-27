@@ -153,7 +153,7 @@ top_10_edges_nodes = [(u, v) for u, v, _ in top_10_edges]
 # Specify the desired 'classification' attribute values to display
 desired_classifications = ['Motorway', 'A Road', 'B Road', 'Other']
 
-# Create a subgraph containing all edges
+'''# Create a subgraph containing all edges
 subgraph_all = graph.edge_subgraph(top_10_edges_nodes)
 
 # Get the positions of nodes using the 'pos' attribute for the subgraph containing all edges
@@ -176,7 +176,7 @@ ax1.set_title('All Road Classifications')
 ax1.axis('off')
 ax1.legend(['Motorway', 'A Road', 'B Road', 'Other'], loc='lower right', title='Road Classification')
 # Display the plots
-plt.show()
+plt.show()'''
 
 # Create a new figure and axis for the sub-plots
 fig, axs = plt.subplots(2, 2, figsize=(15, 15), dpi=600)
@@ -205,10 +205,12 @@ for i, desired_classification in enumerate(desired_classifications):
         nx.draw_networkx_edges(subgraph, pos=node_positions, width=2, edge_color='skyblue', ax=ax2)
 
         # Set the graph title and axis visibility
-        ax1.set_title(f'Top 10% Edges with Highest Flow (Classification: {desired_classification})')
-        ax1.axis('off')
+        ax2.set_title(f'Top 10% Edges with Highest Flow (Classification: {desired_classification})')
+        ax2.axis('off')
     except Exception as e:
         print(f"An error occurred for the classification '{desired_classification}': {e}")
+    except BrokenPipeError as e:
+        print("Broken pipe error:", e)
 
 # Adjust the layout to avoid overlapping plots
 plt.tight_layout()
