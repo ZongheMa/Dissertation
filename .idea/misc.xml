@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="Black">
+    <option name="executionMode" value="BINARY" />
+    <option name="pathToExecutable" value="/opt/anaconda3/bin/black" />
+    <option name="sdkUUID" value="329e1e40-5311-4386-b76a-763ba190680c" />
+  </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="geospatial" project-jdk-type="Python SDK" />
 </project>
