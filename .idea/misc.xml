@@ -6,4 +6,7 @@
     <option name="sdkUUID" value="329e1e40-5311-4386-b76a-763ba190680c" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="geospatial" project-jdk-type="Python SDK" />
+  <component name="PyCharmDSProjectLayout">
+    <option name="id" value="JupyterRightHiddenStructureLayout" />
+  </component>
 </project>
