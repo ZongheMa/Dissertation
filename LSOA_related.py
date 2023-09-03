@@ -186,7 +186,9 @@ proportions = proportions.rename(columns=lambda x: 'Pct of ' + x + ' POIs (%)' i
 lsoa = pd.merge(lsoa, proportions, left_on='LSOA21CD', right_on='LSOA21CD', how='left')
 lsoa.fillna(0, inplace=True)
 
-lsoa.drop(columns=['lsoa21cd', 'mnemonic_x', 'mnemonic_y', 'num_household_with_child'], inplace=True)
+lsoa.drop(columns=['mnemonic_x', 'mnemonic_y'], inplace=True)
+
+lsoa.drop(columns=['lsoa21cd','num_household_with_child'], inplace=True)
 
 # NaPTAN stops count
 counts_naptan = naptan.groupby(['LSOA21CD']).size().reset_index(name='NaPTAN_count')
@@ -200,10 +202,10 @@ sum_length['Street density (m/ha)'] = sum_length['length'] / lsoa.area.astype(fl
 lsoa = pd.merge(lsoa, sum_length[['LSOA21CD', 'Street density (m/ha)']], left_on='LSOA21CD', right_on='LSOA21CD',
                 how='left')
 
-# connect the flows to the LSOA
-
-lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/Mosaic_LSOA.shp')
-
-lsoa.plot(column='Pct of Retail POIs (%)', legend=True)
-plt.axis('off')
-plt.show()
+# # connect the flows to the LSOA
+#
+# lsoa.to_file('/Users/zonghe/Library/CloudStorage/OneDrive-UniversityCollegeLondon/Zonghe Ma/processed data/Mosaic_LSOA.shp')
+#
+# lsoa.plot(column='Pct of Retail POIs (%)', legend=True)
+# plt.axis('off')
+# plt.show()
